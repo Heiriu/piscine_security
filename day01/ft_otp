@@ -1,0 +1,91 @@
+#!/usr/bin/python3
+import sys
+import os
+from cryptography.fernet import Fernet
+import hmac, base64, struct, hashlib, time
+
+
+def case_g(path: str):
+    try:
+        with open(path, "r") as file:
+            hexa = str(file.read())
+            if len(hexa) != 64:
+                sys.exit(f"\033[0;31mError: the key given need a lenght of 64 characters\033[0m")
+            try:
+                int(hexa, 16)
+            except Exception as e:
+                sys.exit(f"\033[0;31m{e}\033[0m")
+    except Exception as e:
+        sys.exit(f"\033[0;31m{e}\033[0m")
+
+    fichier = open("ft_otp.key",'w')
+    fichier.write(hexa)
+    fichier.close()
+
+    key = Fernet.generate_key()
+    with open('filekey.key', 'wb') as filekey:
+        filekey.write(key)
+    with open('filekey.key', 'rb') as filekey:
+        key = filekey.read()
+    fernet = Fernet(key)
+    with open("ft_otp.key", 'rb') as file:
+        original = file.read()
+    encrypted = fernet.encrypt(original)
+    with open("ft_otp.key", 'wb') as encrypted_file:
+        encrypted_file.write(encrypted)
+    os.remove("filekey.key")
+
+
+def check_arg(arg: list):
+    if len(arg[1]) != 2:
+        sys.exit("\033[0;31mError: wrong flags\nUse \"-g\" or \"-k\":\033[0m")
+    if arg[1][0] == '-':
+        if arg[1][1] == 'g' or arg[1][1] == 'k':
+            return True
+    sys.exit("\033[0;31mError: wrong flags\nUse \"-g\" or \"-k\":\033[0m")
+
+
+def get_hotp_token(secret, intervals_no):
+    key = base64.b64decode(secret)
+    #decoding key
+    msg = struct.pack(">Q", intervals_no)
+    #conversions between Python values and C structs represente
+    h = hmac.new(key, msg, hashlib.sha1).digest()
+    o = o = h[19] & 15
+    #Generate a hash using both of these. Hashing algorithm is HMAC
+    h = (struct.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000
+    #unpacking
+    return h
+
+def get_totp_token(secret):
+    #ensuring to give the same otp for 30 seconds
+    x = str(get_hotp_token(secret,intervals_no = int(time.time())//30))
+    #adding 0 in the beginning till OTP has 6 digits
+    while len(x)!=6:
+        x+='0'
+    return x
+
+
+def main():
+
+    if len(sys.argv) != 3:
+        if len(sys.argv) < 3:
+            sys.exit("\033[0;31mError: missing arg\033[0m")
+        else:
+            sys.exit("\033[0;31mError: too many arg\033[0m")
+    check_arg(sys.argv)
+    if sys.argv[1][1] == 'g':
+        case_g(sys.argv[2])
+        print("\033[0;32mKey was succesfully saved in ft_opt.key\033[0m")
+        return
+    try:
+        with open(sys.argv[2], "r") as file:
+            secret = str(file.read())
+            print(get_totp_token(secret))
+    except Exception as e:
+        sys.exit(f"\033[0;31m{e}\033[0m")
+    return
+
+
+if __name__ == "__main__":
+    main()
