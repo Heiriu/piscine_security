@@ -10,14 +10,14 @@ def download_image(url, file_path, file_name):
     full_path = file_path + file_name
     try:
         urllib.request.urlretrieve(url, full_path)
-        print("\033[0;32mImage download sucessfuly at:\033[0m", full_path)
+        print("\033[0;32mImage download sucessfully at:\033[0m", full_path)
     except ValueError:
         url = "http:" + url
         try:
             urllib.request.urlretrieve(url, full_path)
         except ValueError as e:
+           print("\033[0;31mImage failed to be download.\033[0m")
            sys.exit(e)
-
 
 
 def recursive_download(list_img: list, option: dict, i: int):
@@ -32,6 +32,13 @@ def recursive_download(list_img: list, option: dict, i: int):
         recursive_download(list_img, option, i)
 
 
+def classic_download(list_img: list, option: dict, i: int):
+    while i < len(list_img):
+        split = list_img[i].split(".")
+        file_name = 'img' + str(i) + '.' + split[len(split) - 1]
+        download_image(list_img[i], option['p'], file_name)
+        i += 1
+
 def getdata(url: str):
     try:
         r = requests.get(url)
@@ -41,6 +48,13 @@ def getdata(url: str):
 
 
 def scrap_img(string: str, option: dict):
+    if option['p'][len(option['p']) - 1] != '/':
+        option['p'] = option['p'] + "/"
+    elif option['p'][0] != '.' and option['p'][0] != '/':
+        option['p'] = "./" + option['p']
+    elif option['p'][0] == '/':
+        option['p'] = "." + option['p']
+    
     if option['p'] != "":
         try:  
             os.mkdir(option['p'])  
@@ -52,10 +66,14 @@ def scrap_img(string: str, option: dict):
     list_img = []
     for item in soup.find_all('img'):
         list_img.append(item['src'])
-    print(list_img)
     if list_img == []:
         return;
-    recursive_download(list_img, option, 0)
+    if option['r'] == 0:
+        print("\033[0;33mStarting classic download\033[0m")
+        classic_download(list_img, option, 0)
+    else:
+        print("\033[0;33mStarting recursive download\033[0m")
+        recursive_download(list_img, option, 0)
 
 
 def check_flags(flags: str, option: dict) -> list:
@@ -63,35 +81,55 @@ def check_flags(flags: str, option: dict) -> list:
         y = 0
         while len(i) > y:
             if i[y] == '-':
+                if len(i) > 2:
+                    print_help("\033[0;31mError: wrong flag used\033[0m")
                 y += 1
                 while len(i) > y:
                     if i[y] == 'r':
+                        if option['r'] != 0:
+                            print_help("\033[0;31mError: similar flag found\033[0m")
                         option['r'] = 1
                     elif i[y] == 'l':
+                        if option['r'] == 5:
+                            print_help("\033[0;31mError: similar flag found\033[0m")
                         option['l'] = 5
                     elif i[y] == 'p':
+                        if option['p'] == "./data/":
+                            print_help("\033[0;31mError: similar flag found\033[0m")
                         option['p'] = "./data/"
                     else:
-                        print("\033[0;31mError: wrong flag used\033[0m")
-                        sys.exit()
+                        print_help("\033[0;31mError: wrong flag used\033[0m")
                     y += 1
             elif i[y] >= '0' and i[y] <= '9':
-                option['l'] = int(i)
+                if option['l'] == 0:
+                    print_help("\033[0;31mError: wrong flag used\033[0m")
+                try:
+                    option['l'] = int(i)
+                except ValueError:
+                    print_help("\033[0;31mError: invalid number use\033[0m")
                 y = len(i)
             elif option['p'] == "./data/":
                 option['p'] = i
                 y = len(i)
             else:
-                print("\033[0;31mError: wrong argument provided\033[0m")
-                sys.exit()
+                print_help("\033[0;31mError: wrong argument provided\033[0m")
             y += 1
     return option
 
 
+def print_help(msg: str):
+    print(msg)
+    print("\033[0;33mUsage: ./spider [-rlp] URL.\033[0m")
+    print("\033[0;33mOption -r: recursively downloads the images in a URL received as a parameter.\033[0m")
+    print("\033[0;33mOption -r -l [N]: indicates the maximum depth level of the recursive download. If not indicated, it will be 5.\033[0m")
+    print("\033[0;33mOption -p [PATH] : indicates the path where the downloaded files will be saved. If not specified, ./data/ will be used.\033[0m")
+    sys.exit()
+
+
+
 def main():
     if len(sys.argv) <= 1:
-        print("\033[0;31mError: missing arg or too many arg\033[0m")
-        return
+        print_help("\033[0;31mError: missing args.\033[0m")
     option = {"r": 0, "l": 0, "p": ""}
     if len(sys.argv) > 2:
         option = check_flags(sys.argv[1:len(sys.argv) - 1], option)
