@@ -45,8 +45,8 @@ def check_arg(arg: list):
     sys.exit("\033[0;31mError: wrong flags\nUse \"-g\" or \"-k\":\033[0m")
 
 
-def get_hotp_token(key, counter, digits=6, digest='sha1'):
-    key = base64.b64decode(key.upper() + '=' * ((8 - len(key)) % 8))
+def get_hotp_token(key, counter, digits=7, digest='sha1'):
+    key = base32.b32decode(key.upper() + '=' * ((8 - len(key)) % 8))
     counter = struct.pack('>Q', counter)
     mac = hmac.new(key, counter, digest).digest()
     offset = mac[-1] & 0x0f
