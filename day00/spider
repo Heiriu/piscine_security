@@ -34,6 +34,8 @@ def recursive_download(list_img: list, option: dict, i: int):
 
 def classic_download(list_img: list, option: dict, i: int):
     while i < len(list_img):
+        if option['l'] > 0 and i == option['l']:
+            break
         split = list_img[i].split(".")
         file_name = 'img' + str(i) + '.' + split[len(split) - 1]
         download_image(list_img[i], option['p'], file_name)
@@ -48,12 +50,13 @@ def getdata(url: str):
 
 
 def scrap_img(string: str, option: dict):
-    if option['p'][len(option['p']) - 1] != '/':
-        option['p'] = option['p'] + "/"
-    elif option['p'][0] != '.' and option['p'][0] != '/':
-        option['p'] = "./" + option['p']
-    elif option['p'][0] == '/':
-        option['p'] = "." + option['p']
+    if option['p'] != "":
+        if option['p'][len(option['p']) - 1] != '/':
+            option['p'] = option['p'] + "/"
+        elif option['p'][0] != '.' and option['p'][0] != '/':
+            option['p'] = "./" + option['p']
+        elif option['p'][0] == '/':
+            option['p'] = "." + option['p']
     
     if option['p'] != "":
         try:  
